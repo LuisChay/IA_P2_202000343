@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID3 Decision Tree</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.js"></script>
+    <script type="text/javascript" src="./tytus.js"></script>
+</head>
+<body>
+    <!-- Botón para regresar al index -->
+    <a href="index.html" class="btn btn-secondary position-fixed top-0 end-0 m-3">Volver al Inicio</a>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Árbol de Decisión - Algoritmo ID3</h1>
+        
+        <!-- Entrada para el encabezado -->
+        <div class="mb-3">
+            <label for="header" class="form-label">Encabezado</label>
+            <input type="text" class="form-control" id="header">
+        </div>
+
+        <!-- Entrada para datos de entrenamiento -->
+        <div class="mb-3">
+            <label for="textarea" class="form-label">Ejemplos de Entrenamiento</label>
+            <textarea class="form-control" id="textarea" rows="10"></textarea>
+        </div>
+
+        <!-- Botón para generar árbol de decisión -->
+        <div class="d-flex justify-content-center">
+            <button id="generate" class="btn btn-primary me-2">Generar Árbol de Decisión</button>
+        </div>
+
+        <!-- Entrada para predicciones -->
+        <div class="my-4">
+            <label for="data" class="form-label">Datos para Predecir</label>
+            <input type="text" class="form-control" id="data">
+        </div>
+
+        <!-- Botón para predecir -->
+        <div class="d-flex justify-content-center">
+            <button id="predict" class="btn btn-secondary">Predecir con los Datos Insertados</button>
+        </div>
+
+        <!-- Resultados de la predicción -->
+        <p id="prediction" class="mt-4 text-center fs-5"></p>
+
+        <!-- Visualización del árbol de decisión -->
+        <h3 class="text-center mt-5">Árbol Resultante:</h3>
+        <div class="container mb-5">
+            <div id="tree" style="width: 100%; height: 500px; border: 2px solid #60A0FF; border-radius: 10px;"></div>
+        </div>
+    </div>
+    <!-- Scripts de funcionalidad -->
+    <script type="text/javascript">
+        document.getElementById('predict').onclick = function () {
+            var chart = document.getElementById("tree");
+            var { dotStr, predictNode } = testWithChart();
+            if (predictNode != null) {
+                var header = document.getElementById('header').value;
+                var arrHeader = header.split(",");
+                document.getElementById('prediction').innerText = arrHeader[arrHeader.length-1] + ": " + predictNode.value;
+            } else {
+                document.getElementById('prediction').innerText = "";
+            }
+            var parsDot = vis.network.convertDot(dotStr);
+            var data = { nodes: parsDot.nodes, edges: parsDot.edges };
+            var options = {
+                layout: {
+                    hierarchical: {
+                        levelSeparation: 100,
+                        nodeSpacing: 100,
+                        parentCentralization: true,
+                        direction: 'UD',
+                        sortMethod: 'directed'
+                    },
+                },
+            };
+            var network = new vis.Network(chart, data, options);
+        }
+
+        document.getElementById('generate').onclick = function () {
+            var chart = document.getElementById("tree");
+            var { dotStr, predictNode } = testWithChart();
+            if (predictNode != null) {
+                var header = document.getElementById('header').value;
+                var arrHeader = header.split(",");
+                document.getElementById('prediction').innerText = arrHeader[arrHeader.length-1] + ": " + predictNode.value;
+            } else {
+                document.getElementById('prediction').innerText = "";
+            }
+            var parsDot = vis.network.convertDot(dotStr);
+            var data = { nodes: parsDot.nodes, edges: parsDot.edges };
+            var options = {
+                layout: {
+                    hierarchical: {
+                        levelSeparation: 100,
+                        nodeSpacing: 100,
+                        parentCentralization: true,
+                        direction: 'UD',
+                        sortMethod: 'directed'
+                    },
+                },
+            };
+            var network = new vis.Network(chart, data, options);
+        }
+
+        function testWithChart() {
+            var header = document.getElementById('header').value;
+            var arrHeader = header.split(",");
+            var training = document.getElementById('textarea').value;
+            var arrTraining = training.split("\n");
+            var arrData = [arrHeader];
+            for (var i = 0; i < arrTraining.length; i++) {
+                arrData.push(arrTraining[i].split(","));
+            }
+
+            let dtSt = arrData;
+            let dTree = new DecisionTreeID3(dtSt);
+            let root = dTree.train(dTree.dataset);
+            var pred = document.getElementById('data').value;
+            var arrPred = pred.split(",");
+            var predHeader = arrHeader.slice(0, arrHeader.length - 1);
+            let predict = pred ? dTree.predict([predHeader, arrPred], root) : null;
+            return { dotStr: dTree.generateDotString(root), predictNode: predict };
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

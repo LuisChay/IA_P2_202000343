@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regresión Polinomial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="./tytus.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+<body>
+    <!-- Botón para regresar al index -->
+    <a href="index.html" class="btn btn-secondary position-fixed top-0 end-0 m-3">Volver al Inicio</a>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Regresión Polinomial</h1>
+        
+        <!-- Campo de entrada para valores de X -->
+        <div class="mb-3">
+            <label for="xInput" class="form-label">Valores de X (separados por comas):</label>
+            <input type="text" class="form-control" id="xInput" >
+        </div>
+
+        <!-- Campo de entrada para valores de Y -->
+        <div class="mb-3">
+            <label for="yInput" class="form-label">Valores de Y (separados por comas):</label>
+            <input type="text" class="form-control" id="yInput">
+        </div>
+
+        <!-- Campo de entrada para valores de predictArray -->
+        <div class="mb-3">
+            <label for="predictInput" class="form-label">Valores de X para Predecir (separados por comas):</label>
+            <input type="text" class="form-control" id="predictInput" >
+        </div>
+
+        <!-- Parámetros de configuración de regresión polinomial -->
+        <div id="parameters" class="mb-4">
+            <label for="trainTestSplit" class="form-label">Porcentaje de Train/Test:</label>
+            <input type="number" class="form-control mb-3" id="trainTestSplit" min="1" max="100" value="80">
+        </div>
+
+        <!-- Botones de operación -->
+        <div class="d-flex justify-content-between">
+            <button id="trainButton" class="btn btn-primary">Entrenar</button>
+            <button id="predictButton" class="btn btn-secondary">Predecir</button>
+            <button id="showGraphButton" class="btn btn-info">Mostrar Gráfica</button>
+        </div>
+
+        <!-- Contenedor para gráficos y logs -->
+        <div id="logContainer" class="mt-4">
+            <p class="text-dark" id="log1"></p>
+            <p class="text-dark" id="log2"></p>
+            <p class="text-dark" id="log3"></p>
+            <p class="text-dark" id="log4"></p>
+            <p class="text-dark" id="log5"></p>
+            <p class="text-dark" id="log6"></p>
+            <p class="text-dark" id="log7"></p>
+            <p class="text-dark" id="log8"></p>
+            <p class="text-dark" id="log9"></p>
+        </div>
+        <div id="graphContainer" class="mt-4" style="width: 900px; height: 500px;"></div>
+    </div>
+
+    <script>
+        google.charts.load('current', { 'packages': ['corechart'] });
+
+        function joinArrays() {
+            var a = [];
+            if (arguments.length == 10) {
+                a.push([arguments[0], arguments[2], arguments[4], arguments[6], arguments[8]]);
+                for (var i = 0; i < arguments[1].length; i++) {
+                    a.push([arguments[1][i], arguments[3][i], arguments[5][i], arguments[7][i], arguments[9][i]]);
+                }
+            }
+            return a;
+        }
+
+        let xTrain = [];
+        let yTrain = [];
+        let predictArray = [];
+        let yPredict, yPredict2, yPredict3;
+        let r2, r22, r23;
+
+        // Configura xTrain, yTrain y predictArray a partir de los inputs
+        function setTrainingAndPredictData() {
+            const xInput = document.getElementById("xInput").value;
+            const yInput = document.getElementById("yInput").value;
+            const predictInput = document.getElementById("predictInput").value;
+            xTrain = xInput.split(',').map(Number).filter(val => !isNaN(val));
+            yTrain = yInput.split(',').map(Number).filter(val => !isNaN(val));
+            predictArray = predictInput.split(',').map(Number).filter(val => !isNaN(val));
+        }
+
+        document.getElementById("trainButton").addEventListener("click", function () {
+            setTrainingAndPredictData();
+            if (xTrain.length !== yTrain.length) {
+                alert("La cantidad de valores en X debe coincidir con la de Y.");
+                return;
+            }
+            const polynomial = new PolynomialRegression();
+
+            // Entrena el modelo para distintos grados
+            polynomial.fit(xTrain, yTrain, 2);
+            yPredict = polynomial.predict(predictArray);
+            r2 = polynomial.getError();
+
+            polynomial.fit(xTrain, yTrain, 3);
+            yPredict2 = polynomial.predict(predictArray);
+            r22 = polynomial.getError();
+
+            polynomial.fit(xTrain, yTrain, 4);
+            yPredict3 = polynomial.predict(predictArray);
+            r23 = polynomial.getError();
+
+            alert("Entrenamiento completado.");
+        });
+
+        document.getElementById("predictButton").addEventListener("click", function () {
+            if (yPredict && yPredict2 && yPredict3) {
+                document.getElementById("log1").innerHTML = 'X Train: [' + xTrain + ']';
+                document.getElementById("log2").innerHTML = 'Y Train: [' + yTrain + ']';
+                document.getElementById("log3").innerHTML = 'X To Predict: [' + predictArray + ']';
+                document.getElementById("log4").innerHTML = 'Y Prediction Degree 2: [' + yPredict + ']';
+                document.getElementById("log5").innerHTML = 'Y Prediction Degree 3: [' + yPredict2 + ']';
+                document.getElementById("log6").innerHTML = 'Y Prediction Degree 4: [' + yPredict3 + ']';
+                document.getElementById("log7").innerHTML = 'R^2 for Degree 2: ' + r2.toFixed(2);
+                document.getElementById("log8").innerHTML = 'R^2 for Degree 3: ' + r22.toFixed(2);
+                document.getElementById("log9").innerHTML = 'R^2 for Degree 4: ' + r23.toFixed(2);
+            } else {
+                alert("Primero entrena el modelo.");
+            }
+        });
+
+        document.getElementById("showGraphButton").addEventListener("click", function () {
+            if (yPredict && yPredict2 && yPredict3) {
+                drawChart();
+            } else {
+                alert("Primero entrena el modelo para ver la gráfica.");
+            }
+        });
+
+        function drawChart() {
+            const dataArray = joinArrays('x', predictArray, 'Training', yTrain, 'Prediction Degree 2', yPredict, 'Prediction Degree 3', yPredict2, 'Prediction Degree 4', yPredict3);
+
+            const data = google.visualization.arrayToDataTable(dataArray);
+            const options = {
+                title: 'Regresión Polinomial para Distintos Grados',
+                seriesType: 'scatter',
+                series: {
+                    1: { type: 'line' },
+                    2: { type: 'line' },
+                    3: { type: 'line' }
+                }
+            };
+
+            const chart = new google.visualization.ComboChart(document.getElementById('graphContainer'));
+            chart.draw(data, options);
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
