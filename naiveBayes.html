@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naive Bayes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Botón para regresar al index -->
+    <a href="index.html" class="btn btn-secondary position-fixed top-0 end-0 m-3">Volver al Inicio</a>
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Naive Bayes</h1>
+
+        <!-- Ejemplo de formato JSON -->
+        <div class="alert alert-info">
+            <h4>Formato del archivo JSON</h4>
+            <p>Para cargar los datos correctamente, el archivo JSON debe tener la siguiente estructura:</p>
+            <pre>
+{
+    "causes": [
+        {
+            "name": "Income",
+            "array": ["High", "Low", "Medium", "Medium", "High", "Low", "Medium", "High", "Low", "Medium"]
+        },
+        {
+            "name": "DayOfWeek",
+            "array": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday", "Wednesday", "Friday"]
+        },
+        {
+            "name": "Mood",
+            "array": ["Happy", "Sad", "Neutral", "Happy", "Sad", "Happy", "Neutral", "Sad", "Happy", "Neutral"]
+        },
+        {
+            "name": "BuyLotteryTicket",
+            "array": ["Yes", "No", "Yes", "Yes", "No", "Yes", "No", "No", "Yes", "No"]
+        }
+    ]
+}
+</pre>
+            <p><strong>Nota:</strong> Cada "causa" debe tener un nombre único y un arreglo de valores de igual longitud.</p>
+        </div>
+
+        <!-- Cargar datos desde JSON -->
+        <div class="mb-3">
+            <input type="file" id="jsonFile" accept=".json" class="form-control">
+            <button id="loadJson" class="btn btn-success mt-2">Cargar Datos desde JSON</button>
+        </div>
+
+        <!-- Agregar nueva causa -->
+        <h4>Agregar Nueva Causa</h4>
+        <div class="mb-3">
+            <label for="causeName" class="form-label">Nombre de la Causa</label>
+            <input type="text" id="causeName" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label for="causeValues" class="form-label">Valores (separados por comas)</label>
+            <input type="text" id="causeValues" class="form-control" placeholder="Ejemplo: Sunny, Rainy, Sunny">
+        </div>
+        <button id="addCause" class="btn btn-primary mb-4">Agregar Causa</button>
+
+        <!-- Predicción -->
+        <h4>Predicción</h4>
+        <div class="mb-3">
+            <label for="effect" class="form-label">Efecto (nombre)</label>
+            <input type="text" id="effect" class="form-control" placeholder="Ejemplo: Play Tennis">
+        </div>
+        <div class="mb-3">
+            <label for="events" class="form-label">Eventos (nombre y valor separados por comas)</label>
+            <input type="text" id="events" class="form-control" placeholder="Ejemplo: Weather,Sunny; Temperature,Hot">
+        </div>
+        <button id="predict" class="btn btn-secondary">Realizar Predicción</button>
+
+        <!-- Resultados de la predicción -->
+        <p id="predictionResult" class="mt-4 fs-5 text-center"></p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="tytus.js"></script>
+    <script>
+        const nb = new NaiveBayes();
+
+        // Cargar datos desde JSON
+        document.getElementById("loadJson").onclick = () => {
+            const fileInput = document.getElementById("jsonFile");
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const jsonData = JSON.parse(e.target.result);
+                    jsonData.causes.forEach((cause) => {
+                        nb.insertCause(cause.name, cause.array);
+                    });
+                    console.log("Causas cargadas:", nb.causes);
+                    alert("Datos cargados correctamente.");
+                };
+                reader.readAsText(file);
+            } else {
+                alert("Por favor, selecciona un archivo JSON.");
+            }
+        };
+
+        // Agregar causa manualmente
+        document.getElementById("addCause").onclick = () => {
+            const causeName = document.getElementById("causeName").value.trim();
+            const causeValues = document.getElementById("causeValues").value.split(",").map((v) => v.trim());
+            nb.insertCause(causeName, causeValues);
+            console.log("Causa agregada:", causeName, causeValues);
+        };
+
+        // Realizar predicción
+        document.getElementById("predict").onclick = () => {
+            const effect = document.getElementById("effect").value.trim();
+            const eventsInput = document.getElementById("events").value.trim().split(";");
+            const events = eventsInput.map((e) => e.split(",").map((item) => item.trim()));
+            const result = nb.predict(effect, events);
+            document.getElementById("predictionResult").innerText = `Resultado: ${result[0]}, Probabilidad: ${result[1]}`;
+        };
+    </script>
+</body>
+</html>

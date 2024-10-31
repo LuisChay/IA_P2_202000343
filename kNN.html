@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Nearest Neighbor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="./tytus.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+<body>
+    <!-- Botón para regresar al index -->
+    <a href="index.html" class="btn btn-secondary position-fixed top-0 end-0 m-3">Volver al Inicio</a>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-4">K-Nearest Neighbor</h1>
+
+                <!-- Instrucciones y ejemplo de formato JSON -->
+                <div class="alert alert-info">
+                    <h4>Formato del archivo JSON</h4>
+                    <p>Para cargar los datos correctamente, el archivo JSON debe tener la siguiente estructura:</p>
+                    <pre>
+[
+    ["A", 1, 9, 2, "I"],
+    ["B", 9, 8, 8, "III"],
+    ["C", 2, 8, 3, "I"],
+    ["D", 9, 1, 8, "II"],
+    ["E", 2, 8, 2, "I"],
+    ["F", 9, 8, 9, "III"],
+    ["G", 8, 2, 9, "II"]
+]                    
+        </pre>
+                </div>
+
+        <!-- Tabla de entrenamiento -->
+        <h3 class="text-center mt-5">Training Data</h3>
+        <div id="tabla" class="table-responsive mb-4"></div>
+        
+        <!-- Botón para cargar JSON -->
+        <div class="text-center mb-4">
+            <input type="file" id="jsonFileInput" accept=".json" class="form-control d-inline w-auto">
+            <button onclick="cargarDatosDesdeJSON()" class="btn btn-primary">Cargar Datos</button>
+        </div>
+
+        <!-- Entrada para el punto de evaluación -->
+        <h3 class="text-center">Ingresar Punto de Evaluación</h3>
+        <div class="text-center mb-4">
+            <input type="text" id="pointInput" placeholder="Ejemplo: H 5 7 9" class="form-control d-inline w-auto">
+            <button onclick="cargarPuntoDesdeTexto()" class="btn btn-primary">Calcular Distancias</button>
+        </div>
+
+        <!-- Resultados de distancias -->
+        <h4 class="text-center mt-5">Distancias</h4>
+        <p><strong>Euclidean:</strong> <span id="logE"></span></p>
+        <p><strong>Manhattan:</strong> <span id="logM"></span></p>
+
+        <!-- Gráfico de KNN -->
+        <div id="chart_div" class="container mt-4" style="width: 900px; height: 500px; border: 2px solid #60A0FF; border-radius: 10px;"></div>
+    </div>
+
+    <script>
+        let knn;
+        let ind = [], x2 = [], y2 = [], z = [], group = [];
+        let point = null;
+
+        function cargarDatosDesdeJSON() {
+            const fileInput = document.getElementById("jsonFileInput").files[0];
+            if (!fileInput) return alert("Por favor selecciona un archivo JSON de datos.");
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                alert("Datos cargados correctamente.");
+                const data = JSON.parse(event.target.result);
+
+                if (data.length !== 7 || data[0].length !== 5) {
+                    alert("El archivo JSON debe contener exactamente 7 filas y 5 columnas en la estructura esperada.");
+                    return;
+                }
+
+                ind = data.map(row => row[0]);
+                x2 = data.map(row => row[1]);
+                y2 = data.map(row => row[2]);
+                z = data.map(row => row[3]);
+                group = data.map(row => row[4]);
+
+                mostrarDatosEnTabla(data);
+                inicializarKNN();
+                drawChart();
+            };
+            reader.readAsText(fileInput);
+        }
+
+        function mostrarDatosEnTabla(data) {
+            let tablaHTML = "<table class='table table-bordered'><thead><tr><th>Index</th><th>X</th><th>Y</th><th>Z</th><th>Group</th></tr></thead><tbody>";
+            data.forEach(fila => {
+                tablaHTML += `<tr><td>${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td>${fila[4]}</td></tr>`;
+            });
+            tablaHTML += "</tbody></table>";
+            document.getElementById("tabla").innerHTML = tablaHTML;
+        }
+
+        function inicializarKNN() {
+            const individuals = x2.map((x, i) => [x, y2[i], z[i], group[i]]);
+            knn = new KNearestNeighbor(individuals);
+        }
+
+        function cargarPuntoDesdeTexto() {
+            const input = document.getElementById("pointInput").value.trim();
+            const partes = input.split(" ");
+
+            if (partes.length !== 4) {
+                alert("Por favor ingresa el punto en el formato correcto: ID X Y Z");
+                return;
+            }
+
+            // Extraer coordenadas y convertir a número
+            const x = parseFloat(partes[1]);
+            const y = parseFloat(partes[2]);
+            const zVal = parseFloat(partes[3]);
+
+            if (isNaN(x) || isNaN(y) || isNaN(zVal)) {
+                alert("Asegúrate de ingresar valores numéricos para X, Y y Z.");
+                return;
+            }
+
+            point = [x, y, zVal];
+            calcularDistancias();
+        }
+
+        function calcularDistancias() {
+            if (!knn || !point) return alert("Primero carga los datos de entrenamiento y el punto de evaluación.");
+
+            // Calcular distancias
+            const euc = knn.euclidean(point).join(", ");
+            const man = knn.manhattan(point).join(", ");
+            document.getElementById("logE").innerText = euc;
+            document.getElementById("logM").innerText = man;
+        }
+
+        // Cargar y dibujar el gráfico
+        google.charts.load("current", { packages: ["corechart"] });
+        
+        function drawChart() {
+            if (x2.length === 0 || y2.length === 0 || group.length === 0) return;
+
+            const data = new google.visualization.DataTable();
+            data.addColumn('number', 'X');
+            data.addColumn('number', 'Y');
+            data.addColumn({ type: 'string', role: 'style' });
+            data.addColumn({ type: 'string', role: 'annotation' });
+
+            // Asigna colores y formas específicas según el grupo y añade las etiquetas
+            x2.forEach((x, i) => {
+                let color = '';
+                let shape = '';
+
+                switch (group[i]) {
+                    case 'I':
+                        color = 'red';
+                        shape = 'square';
+                        break;
+                    case 'II':
+                        color = 'orange';
+                        shape = 'triangle';
+                        break;
+                    case 'III':
+                        color = 'blue';
+                        shape = 'circle';
+                        break;
+                }
+
+                data.addRow([x, y2[i], `point {fill-color: ${color}; shape-type: ${shape};}`, ind[i]]);
+            });
+
+            const options = {
+                legend: 'none',
+                pointSize: 20,
+                hAxis: { title: 'X' },
+                vAxis: { title: 'Y' },
+                annotations: {
+                    textStyle: {
+                        fontSize: 12,
+                        bold: true,
+                    }
+                }
+            };
+
+            const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

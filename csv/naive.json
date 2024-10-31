@@ -1,0 +1,20 @@
+{
+    "causes": [
+        {
+            "name": "Income",
+            "array": ["High", "Low", "Medium", "Medium", "High", "Low", "Medium", "High", "Low", "Medium"]
+        },
+        {
+            "name": "DayOfWeek",
+            "array": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday", "Wednesday", "Friday"]
+        },
+        {
+            "name": "Mood",
+            "array": ["Happy", "Sad", "Neutral", "Happy", "Sad", "Happy", "Neutral", "Sad", "Happy", "Neutral"]
+        },
+        {
+            "name": "BuyLotteryTicket",
+            "array": ["Yes", "No", "Yes", "Yes", "No", "Yes", "No", "No", "Yes", "No"]
+        }
+    ]
+}

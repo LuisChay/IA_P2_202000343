@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KMeans Clustering - Proyecto de Machine Learning</title>
+    <title>KMeans Clusteringg</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script type="text/javascript" src="./tytus.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -12,8 +12,42 @@
     <!-- Botón para regresar al index -->
     <a href="index.html" class="btn btn-secondary position-fixed top-0 end-0 m-3">Volver al Inicio</a>
 
+
     <div class="container my-5">
-        <h1 class="text-center mb-4">KMeans Clustering</h1>
+        <h1 class="text-center mb-4">KMeans</h1>
+
+                <!-- Instrucción para el CSV de carga -->
+                <div class="alert alert-info">
+        <strong>Lineal:</strong> Carga un archivo CSV con la siguiente estructura para entrenar el modelo lineal
+                    <pre>
+
+Valores
+-99
+-92
+-92
+-89
+-87
+-83
+-82
+-78
+-76
+-70
+</pre>
+
+<strong>2D:</strong> Carga un archivo CSV con la siguiente estructura para entrenar el modelo 2D
+                <pre>
+                    
+X,Y
+0,0
+1,3
+2,5
+3,4
+4,6
+5,6
+6,7
+7,10
+</pre>
+</div>
         
         <!-- Selección de tipo de análisis -->
         <div class="mb-3">
@@ -30,10 +64,10 @@
             <input type="number" class="form-control" id="cluster_count" placeholder="Ingrese la cantidad de clusters" value="3">
         </div>
 
-        <!-- Campo de entrada para datos (cambia según el tipo) -->
+        <!-- Campo de carga de archivo CSV para datos -->
         <div class="mb-3">
-            <label for="data_input" class="form-label">Datos</label>
-            <input type="text" class="form-control" id="data_input" placeholder="Ingrese los datos según el tipo seleccionado">
+            <label for="data_file" class="form-label">Cargar Archivo de Datos (CSV)</label>
+            <input type="file" class="form-control" id="data_file" accept=".csv">
         </div>
 
         <!-- Campo de entrada para cantidad de iteraciones -->
@@ -53,38 +87,53 @@
     </div>
 
     <script>
-        document.getElementById('type_select').addEventListener('change', function () {
-            const type = document.getElementById('type_select').value;
-            const dataInput = document.getElementById('data_input');
-            dataInput.placeholder = type === 'lineal' 
-                ? 'Ingrese los números separados por comas (0,1,2,...)' 
-                : 'Ingrese los puntos en formato [x,y] separados por comas ([0,0],[0,1],...)';
-            dataInput.value = type === 'lineal' 
-                ? '-99,-92,-89,-87,-83,-82,-78,-76,-70,-62,-57,-55,-50,-42,-35,-33,-32,-30,-27,-17,-12,-10,0,1,2,25,29,33,39,41,53,54,67' 
-                : '[11,6],[4,2],[15,0],[10,6],[7,8],[9,12],[13,0],[5,1],[0,13],[7,5],[6,1],[3,6],[0,10],[14,10],[6,14],[6,4],[4,9],[5,14],[9,9],[13,8]';
-        });
-
         document.getElementById('calculate_button').onclick = function () {
             const type = document.getElementById('type_select').value;
             const clusterCount = parseInt(document.getElementById('cluster_count').value);
             const iterations = parseInt(document.getElementById('iterations').value);
-            const dataInput = document.getElementById('data_input').value;
+            const fileInput = document.getElementById('data_file');
 
-            if (type === 'lineal') {
-                calculateLinealKMeans(clusterCount, iterations, dataInput);
-            } else {
-                calculate2DKMeans(clusterCount, iterations, dataInput);
-            }
-        };
-
-        function calculateLinealKMeans(clusterCount, iterations, dataInput) {
-            const data = dataInput.split(',').map(Number).filter(val => !isNaN(val));
-
-            if (data.length < clusterCount) {
-                alert(`El número de clusters (${clusterCount}) no puede ser mayor que la cantidad de datos (${data.length})`);
+            if (!fileInput.files.length) {
+                alert('Por favor, seleccione un archivo CSV.');
                 return;
             }
 
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                
+                const csvData = event.target.result;
+                const parsedData = parseCSV(csvData, type);
+                
+                if (parsedData.length < clusterCount) {
+                    alert(`El número de clusters (${clusterCount}) no puede ser mayor que la cantidad de datos (${parsedData.length})`);
+                    return;
+                }
+
+                if (type === 'lineal') {
+                    calculateLinealKMeans(clusterCount, iterations, parsedData);
+                } else {
+                    calculate2DKMeans(clusterCount, iterations, parsedData);
+                }
+
+                alert("KMeans calculado correctamente.");
+            };
+            reader.readAsText(file);
+        };
+
+        function parseCSV(data, type) {
+            const rows = data.trim().split('\n');
+            if (type === 'lineal') {
+                return rows.slice(1).map(row => parseFloat(row));
+            } else {
+                return rows.slice(1).map(row => {
+                    const [x, y] = row.split(',').map(Number);
+                    return [x, y];
+                });
+            }
+        }
+
+        function calculateLinealKMeans(clusterCount, iterations, data) {
             const kmeans = new LinearKMeans(clusterCount, data);
             const clusterizedData = kmeans.clusterize(clusterCount, data, iterations);
 
@@ -93,14 +142,7 @@
             google.charts.setOnLoadCallback(() => drawChartLineal(clusterizedData, clusters));
         }
 
-        function calculate2DKMeans(clusterCount, iterations, dataInput) {
-            const data = dataInput.replace(/\s/g, '').replace(/\[/g, '').split('],').map(d => d.replace(']', '').split(',').map(Number));
-
-            if (data.length < clusterCount) {
-                alert(`El número de clusters (${clusterCount}) no puede ser mayor que la cantidad de datos (${data.length})`);
-                return;
-            }
-
+        function calculate2DKMeans(clusterCount, iterations, data) {
             const kmeans = new _2DKMeans(clusterCount, data);
             const clusterizedData = kmeans.clusterize(clusterCount, data, iterations);
 

@@ -14,28 +14,45 @@
 
     <div class="container my-5">
         <h1 class="text-center mb-4">Árbol de Decisión - Algoritmo ID3</h1>
-        
-        <!-- Entrada para el encabezado -->
-        <div class="mb-3">
-            <label for="header" class="form-label">Encabezado</label>
-            <input type="text" class="form-control" id="header">
+
+        <!-- Instrucciones y ejemplo de formato JSON -->
+        <div class="alert alert-info">
+            <h4>Formato del archivo JSON</h4>
+            <p>Para cargar los datos correctamente, el archivo JSON debe tener la siguiente estructura:</p>
+            <pre>
+{
+    "header": ["Outlook", "Temperature", "Humidity", "Windy", "Play Tennis"],
+    "training_data": [
+        ["Sunny", "Hot", "High", "Weak", "No"],
+        ["Sunny", "Hot", "High", "Strong", "No"],
+        ["Overcast", "Hot", "High", "Weak", "Yes"],
+        ["Rainy", "Mild", "High", "Weak", "Yes"],
+        ["Rainy", "Cool", "Normal", "Weak", "Yes"],
+        ["Rainy", "Cool", "Normal", "Strong", "No"],
+        ["Overcast", "Cool", "Normal", "Strong", "Yes"],
+        ["Sunny", "Mild", "High", "Weak", "No"],
+        ["Sunny", "Cool", "Normal", "Weak", "Yes"],
+        ["Rainy", "Mild", "Normal", "Weak", "Yes"],
+        ["Sunny", "Mild", "Normal", "Strong", "Yes"],
+        ["Overcast", "Mild", "High", "Strong", "Yes"],
+        ["Overcast", "Hot", "Normal", "Weak", "Yes"],
+        ["Rainy", "Mild", "High", "Strong", "No"]
+    ]
+}
+</pre>
+            <p><strong>Nota:</strong> La primera línea "header" contiene los nombres de las características y el resultado. La matriz "training_data" incluye los ejemplos de entrenamiento, donde cada fila es un ejemplo y la última columna corresponde al resultado esperado.</p>
         </div>
 
-        <!-- Entrada para datos de entrenamiento -->
-        <div class="mb-3">
-            <label for="textarea" class="form-label">Ejemplos de Entrenamiento</label>
-            <textarea class="form-control" id="textarea" rows="10"></textarea>
-        </div>
-
-        <!-- Botón para generar árbol de decisión -->
-        <div class="d-flex justify-content-center">
-            <button id="generate" class="btn btn-primary me-2">Generar Árbol de Decisión</button>
+        <!-- Botón para cargar JSON -->
+        <div class="mb-3 text-center">
+            <input type="file" id="jsonFile" accept=".json" class="form-control">
+            <button id="loadJson" class="btn btn-success mt-2">Cargar Datos desde JSON</button>
         </div>
 
         <!-- Entrada para predicciones -->
         <div class="my-4">
             <label for="data" class="form-label">Datos para Predecir</label>
-            <input type="text" class="form-control" id="data">
+            <input type="text" class="form-control" id="data" placeholder="Ejemplo: Overcast, Cool, Normal, Strong">
         </div>
 
         <!-- Botón para predecir -->
@@ -52,79 +69,93 @@
             <div id="tree" style="width: 100%; height: 500px; border: 2px solid #60A0FF; border-radius: 10px;"></div>
         </div>
     </div>
+
     <!-- Scripts de funcionalidad -->
     <script type="text/javascript">
+        let header = [];
+        let trainingData = [];
+        let dTree = null;
+        let root = null;
+
+        // Cargar datos desde archivo JSON y generar el árbol de decisión
+        document.getElementById('loadJson').onclick = function () {
+            const fileInput = document.getElementById('jsonFile');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const jsonData = JSON.parse(e.target.result);
+                    
+                    // Asignar encabezado y datos de entrenamiento
+                    header = jsonData.header;
+                    trainingData = jsonData.training_data;
+
+                    console.log("Datos JSON cargados:");
+                    console.log("Encabezado:", header);
+                    console.log("Datos de entrenamiento:", trainingData);
+
+                    // Generar el árbol con los datos de entrenamiento
+                    alert("Datos cargados correctamente. Generando árbol de decisión...");
+                    generateTree();
+                };
+                
+                reader.readAsText(file);
+            } else {
+                alert("Por favor, selecciona un archivo JSON.");
+            }
+        };
+
+        function generateTree() {
+            var chart = document.getElementById("tree");
+            var arrData = [header].concat(trainingData);
+            dTree = new DecisionTreeID3(arrData);
+            root = dTree.train(dTree.dataset);
+
+            console.log("Árbol de decisión generado.");
+
+            // Generar y mostrar el gráfico del árbol
+            var dotStr = dTree.generateDotString(root);
+            var parsDot = vis.network.convertDot(dotStr);
+            var data = { nodes: parsDot.nodes, edges: parsDot.edges };
+            var options = {
+                layout: {
+                    hierarchical: {
+                        levelSeparation: 100,
+                        nodeSpacing: 100,
+                        parentCentralization: true,
+                        direction: 'UD',
+                        sortMethod: 'directed'
+                    },
+                },
+            };
+            var network = new vis.Network(chart, data, options);
+        }
+
+        // Realizar la predicción cuando el usuario ingrese los datos y haga clic en "Predecir"
         document.getElementById('predict').onclick = function () {
-            var chart = document.getElementById("tree");
-            var { dotStr, predictNode } = testWithChart();
-            if (predictNode != null) {
-                var header = document.getElementById('header').value;
-                var arrHeader = header.split(",");
-                document.getElementById('prediction').innerText = arrHeader[arrHeader.length-1] + ": " + predictNode.value;
-            } else {
-                document.getElementById('prediction').innerText = "";
-            }
-            var parsDot = vis.network.convertDot(dotStr);
-            var data = { nodes: parsDot.nodes, edges: parsDot.edges };
-            var options = {
-                layout: {
-                    hierarchical: {
-                        levelSeparation: 100,
-                        nodeSpacing: 100,
-                        parentCentralization: true,
-                        direction: 'UD',
-                        sortMethod: 'directed'
-                    },
-                },
-            };
-            var network = new vis.Network(chart, data, options);
-        }
-
-        document.getElementById('generate').onclick = function () {
-            var chart = document.getElementById("tree");
-            var { dotStr, predictNode } = testWithChart();
-            if (predictNode != null) {
-                var header = document.getElementById('header').value;
-                var arrHeader = header.split(",");
-                document.getElementById('prediction').innerText = arrHeader[arrHeader.length-1] + ": " + predictNode.value;
-            } else {
-                document.getElementById('prediction').innerText = "";
-            }
-            var parsDot = vis.network.convertDot(dotStr);
-            var data = { nodes: parsDot.nodes, edges: parsDot.edges };
-            var options = {
-                layout: {
-                    hierarchical: {
-                        levelSeparation: 100,
-                        nodeSpacing: 100,
-                        parentCentralization: true,
-                        direction: 'UD',
-                        sortMethod: 'directed'
-                    },
-                },
-            };
-            var network = new vis.Network(chart, data, options);
-        }
-
-        function testWithChart() {
-            var header = document.getElementById('header').value;
-            var arrHeader = header.split(",");
-            var training = document.getElementById('textarea').value;
-            var arrTraining = training.split("\n");
-            var arrData = [arrHeader];
-            for (var i = 0; i < arrTraining.length; i++) {
-                arrData.push(arrTraining[i].split(","));
+            if (!root || !dTree) {
+                alert("Por favor, carga los datos desde JSON y genera el árbol antes de intentar predecir.");
+                return;
             }
 
-            let dtSt = arrData;
-            let dTree = new DecisionTreeID3(dtSt);
-            let root = dTree.train(dTree.dataset);
             var pred = document.getElementById('data').value;
-            var arrPred = pred.split(",");
-            var predHeader = arrHeader.slice(0, arrHeader.length - 1);
-            let predict = pred ? dTree.predict([predHeader, arrPred], root) : null;
-            return { dotStr: dTree.generateDotString(root), predictNode: predict };
-        }
+            var arrPred = pred.split(",").map(item => item.trim());
+            
+            console.log("Datos de predicción ingresados:", arrPred);
+
+            var predHeader = header.slice(0, header.length - 1);
+            let predictNode = dTree.predict([predHeader, arrPred], root);
+
+            if (predictNode) {
+                document.getElementById('prediction').innerText = header[header.length - 1] + ": " + predictNode.value;
+                console.log("Predicción realizada:", predictNode.value);
+            } else {
+                document.getElementById('prediction').innerText = "No se pudo generar una predicción con los datos proporcionados.";
+                console.error("No se generó ninguna predicción válida. Verifica los datos de entrada.");
+            }
+        };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

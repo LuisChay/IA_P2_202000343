@@ -14,23 +14,25 @@
 
     <div class="container my-5">
         <h1 class="text-center mb-4">Regresión Polinomial</h1>
-        
-        <!-- Campo de entrada para valores de X -->
-        <div class="mb-3">
-            <label for="xInput" class="form-label">Valores de X (separados por comas):</label>
-            <input type="text" class="form-control" id="xInput" >
+
+        <!-- Ejemplo de formato CSV -->
+        <div class="alert alert-info" role="alert">
+            <strong>Formato del archivo CSV:</strong> El archivo debe contener tres columnas con encabezados <code>X</code>, <code>Y</code> y <code>X_to_predict</code>.<br>
+            Ejemplo de contenido:
+            <pre>
+X,Y,XPredict
+1,2,6
+2,3,7
+3,5,8
+4,7,9
+5,11,10
+</pre>
         </div>
 
-        <!-- Campo de entrada para valores de Y -->
+        <!-- Campo de entrada para subir archivo CSV -->
         <div class="mb-3">
-            <label for="yInput" class="form-label">Valores de Y (separados por comas):</label>
-            <input type="text" class="form-control" id="yInput">
-        </div>
-
-        <!-- Campo de entrada para valores de predictArray -->
-        <div class="mb-3">
-            <label for="predictInput" class="form-label">Valores de X para Predecir (separados por comas):</label>
-            <input type="text" class="form-control" id="predictInput" >
+            <label for="csvInput" class="form-label">Subir archivo CSV:</label>
+            <input type="file" class="form-control" id="csvInput" accept=".csv">
         </div>
 
         <!-- Parámetros de configuración de regresión polinomial -->
@@ -81,34 +83,68 @@
         let yPredict, yPredict2, yPredict3;
         let r2, r22, r23;
 
-        // Configura xTrain, yTrain y predictArray a partir de los inputs
-        function setTrainingAndPredictData() {
-            const xInput = document.getElementById("xInput").value;
-            const yInput = document.getElementById("yInput").value;
-            const predictInput = document.getElementById("predictInput").value;
-            xTrain = xInput.split(',').map(Number).filter(val => !isNaN(val));
-            yTrain = yInput.split(',').map(Number).filter(val => !isNaN(val));
-            predictArray = predictInput.split(',').map(Number).filter(val => !isNaN(val));
-        }
+        // Lee y procesa el archivo CSV
+        document.getElementById("csvInput").addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const csvData = e.target.result;
+                const lines = csvData.split("\n");
+
+                // Arrays temporales para X, Y y X_to_predict
+                let csvX = [];
+                let csvY = [];
+                let csvPredict = [];
+
+                for (let i = 1; i < lines.length; i++) { // Saltar encabezado
+                    const [x, y, xPredict] = lines[i].split(",").map(Number);
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(xPredict)) {
+                        csvX.push(x);
+                        csvY.push(y);
+                        csvPredict.push(xPredict);
+                    }
+                }
+
+                if (csvX.length !== csvY.length || csvX.length === 0) {
+                    alert("El archivo CSV no es válido o está vacío.");
+                    return;
+                }
+
+                // Asignar datos desde CSV a los arrays de entrenamiento y predicción
+                xTrain = csvX;
+                yTrain = csvY;
+                predictArray = csvPredict;
+                alert("Datos cargados exitosamente desde el archivo CSV.");
+            };
+
+            reader.readAsText(file);
+        });
 
         document.getElementById("trainButton").addEventListener("click", function () {
-            setTrainingAndPredictData();
-            if (xTrain.length !== yTrain.length) {
-                alert("La cantidad de valores en X debe coincidir con la de Y.");
+            if (xTrain.length === 0 || yTrain.length === 0 || predictArray.length === 0) {
+                alert("Primero cargue un archivo CSV válido.");
                 return;
             }
+
+            const trainTestSplit = parseInt(document.getElementById("trainTestSplit").value, 10) / 100;
+            const trainSize = Math.floor(xTrain.length * trainTestSplit);
+
+            const xTrainSubset = xTrain.slice(0, trainSize);
+            const yTrainSubset = yTrain.slice(0, trainSize);
             const polynomial = new PolynomialRegression();
 
             // Entrena el modelo para distintos grados
-            polynomial.fit(xTrain, yTrain, 2);
+            polynomial.fit(xTrainSubset, yTrainSubset, 2);
             yPredict = polynomial.predict(predictArray);
             r2 = polynomial.getError();
 
-            polynomial.fit(xTrain, yTrain, 3);
+            polynomial.fit(xTrainSubset, yTrainSubset, 3);
             yPredict2 = polynomial.predict(predictArray);
             r22 = polynomial.getError();
 
-            polynomial.fit(xTrain, yTrain, 4);
+            polynomial.fit(xTrainSubset, yTrainSubset, 4);
             yPredict3 = polynomial.predict(predictArray);
             r23 = polynomial.getError();
 
@@ -161,3 +197,4 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

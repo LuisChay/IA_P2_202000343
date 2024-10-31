@@ -14,17 +14,27 @@
 
     <div class="container my-5">
         <h1 class="text-center mb-4">Regresión Lineal</h1>
-        
-        <!-- Campo de entrada para valores de X -->
-        <div class="mb-3">
-            <label for="xInput" class="form-label">Valores de X (separados por comas):</label>
-            <input type="text" class="form-control" id="xInput">
+
+        <!-- Instrucción para el CSV de carga -->
+        <div class="alert alert-info">
+            <strong>Instrucciones:</strong> Carga un archivo CSV con la siguiente estructura para entrenar el modelo automáticamente:
+            <pre>
+X,Y
+0,0
+1,3
+2,5
+3,4
+4,6
+5,6
+6,7
+7,10
+</pre>
         </div>
 
-        <!-- Campo de entrada para valores de Y -->
+        <!-- Área de carga de archivo CSV -->
         <div class="mb-3">
-            <label for="yInput" class="form-label">Valores de Y (separados por comas):</label>
-            <input type="text" class="form-control" id="yInput" >
+            <label for="csvFile" class="form-label">Cargar archivo CSV:</label>
+            <input type="file" class="form-control" id="csvFile" accept=".csv">
         </div>
 
         <!-- Parámetros de configuración de regresión lineal -->
@@ -41,9 +51,10 @@
 
         <!-- Botones de operación -->
         <div class="d-flex justify-content-between">
-            <button id="trainButton" class="btn btn-primary">Entrenar</button>
+            <button id="trainButton" class="btn btn-primary" disabled>Entrenar</button>
             <button id="predictButton" class="btn btn-secondary">Predecir</button>
             <button id="showGraphButton" class="btn btn-info">Mostrar Gráfica</button>
+            <button id="evaluateButton" class="btn btn-success">Evaluar Modelo</button>
         </div>
 
         <!-- Contenedor para gráficos y logs -->
@@ -57,17 +68,45 @@
         let xTrain = [];
         let yTrain = [];
         let yPredict = [];
+        let linear = null;
 
-        // Configura xTrain y yTrain a partir de los inputs
-        function setTrainingData() {
-            const xInput = document.getElementById("xInput").value;
-            const yInput = document.getElementById("yInput").value;
-            xTrain = xInput.split(',').map(Number).filter(val => !isNaN(val));
-            yTrain = yInput.split(',').map(Number).filter(val => !isNaN(val));
+        // Lee y procesa el archivo CSV cargado y entrena el modelo
+        document.getElementById("csvFile").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    alert("Archivo cargado correctamente.");
+                    processCSV(content);
+                    trainModel();  // Llama al entrenamiento después de procesar el CSV
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Procesa el contenido del CSV para obtener xTrain e yTrain
+        function processCSV(data) {
+            const rows = data.split("\n").map(row => row.split(","));
+            xTrain = [];
+            yTrain = [];
+            
+            rows.forEach((row, index) => {
+                if (index > 0 && row.length >= 2) { // Ignora la cabecera
+                    const xValue = parseFloat(row[0]);
+                    const yValue = parseFloat(row[1]);
+                    if (!isNaN(xValue) && !isNaN(yValue)) {
+                        xTrain.push(xValue);
+                        yTrain.push(yValue);
+                    }
+                }
+            });
+
+            document.getElementById("log").innerHTML = "Datos cargados desde CSV:<br>X: " + xTrain + "<br>Y: " + yTrain;
         }
 
-        document.getElementById("trainButton").addEventListener("click", function () {
-            setTrainingData();
+        // Entrena el modelo
+        function trainModel() {
             if (xTrain.length !== yTrain.length) {
                 alert("La cantidad de valores en X debe coincidir con la de Y.");
                 return;
@@ -77,7 +116,7 @@
             const learningRate = parseFloat(document.getElementById("learningRate").value);
             const iterations = parseInt(document.getElementById("iterations").value);
 
-            const linear = new LinearRegression({ 
+            linear = new LinearRegression({ 
                 learningRate: learningRate, 
                 iterations: iterations 
             });
@@ -89,13 +128,13 @@
             linear.fit(xTrainSplit, yTrainSplit);
             yPredict = linear.predict(xTrain);
 
-            document.getElementById("log").innerHTML = 
-                'Entrenamiento completado.<br>' +
+            document.getElementById("log").innerHTML += 
+                '<br>Entrenamiento completado.<br>' +
                 'Tasa de Aprendizaje: ' + learningRate + '<br>' +
                 'Iteraciones: ' + iterations + '<br>' +
                 'X Train: ' + xTrain + '<br>' +
                 'Y Train: ' + yTrain;
-        });
+        }
 
         document.getElementById("predictButton").addEventListener("click", function () {
             if (yPredict.length > 0) {
@@ -110,6 +149,18 @@
                 drawChart();
             } else {
                 alert("Primero entrena el modelo para ver la gráfica.");
+            }
+        });
+
+        document.getElementById("evaluateButton").addEventListener("click", function () {
+            if (yPredict.length > 0 && linear) {
+                const mse = linear.mserror(yTrain, yPredict);
+                const r2 = linear.coeficientR2(yTrain, yPredict);
+                document.getElementById("log").innerHTML += 
+                    '<br>Error Cuadrático Medio (MSE): ' + mse + 
+                    '<br>Coeficiente de Determinación (R²): ' + r2;
+            } else {
+                alert("Primero entrena y realiza predicciones para evaluar el modelo.");
             }
         });
 
