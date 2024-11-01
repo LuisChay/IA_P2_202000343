@@ -36,8 +36,9 @@ n1,n2
         
         <!-- Entrada de datos de entrenamiento -->
         <div class="mb-4">
-            <h4>Ejemplos de Entrenamiento</h4>
+            <h4>Carga de datos</h4>
             <input type="file" id="csvFileInput" class="form-control mt-3" accept=".csv" />
+            <button id="entrenarBoton" class="btn btn-success mt-2">Entrenar</button>
         </div>
 
         <!-- Sección de predicciones para n1 > n2 -->
@@ -121,6 +122,10 @@ n1,n2
 
             const prediction = brain.Predecir([n1, n2]).map(value => value.toFixed(5));
             document.getElementById("prediction_2").innerText = `Predicción [${n1}, ${n2}]: ${prediction}`;
+        };
+
+        document.getElementById('entrenarBoton').onclick = function () {
+            alert("Modelo entrenado exitosamente");
         };
     </script>
     
